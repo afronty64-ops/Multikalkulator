@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multikalkulator</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f5f3;
+    --surface: #ffffff;
+    --text: #1d1d1b;
+    --muted: #6b6b66;
+    --accent: #2f6f4e;
+    --border: #d9d9d4;
+    --good: #1f7a3a;
+    --bad: #a32424;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #1a1a19;
+      --surface: #252523;
+      --text: #ececE8;
+      --muted: #a2a29c;
+      --accent: #5fb383;
+      --border: #3a3a37;
+      --good: #6fd08c;
+      --bad: #ff8b8b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1a1a19;
+    --surface: #252523;
+    --text: #ececE8;
+    --muted: #a2a29c;
+    --accent: #5fb383;
+    --border: #3a3a37;
+    --good: #6fd08c;
+    --bad: #ff8b8b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 0.95rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; }
+  input, select { width: 100%; margin-top: 4px; padding: 10px; font-size: 1rem; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .result { font-size: 1.6rem; font-weight: 600; margin: 4px 0; }
+  .detail { color: var(--muted); font-size: 0.9rem; margin: 2px 0; }
+  .verdict { padding: 12px; border-radius: 8px; font-weight: 600; margin-top: 12px; }
+  .verdict.good { color: var(--good); border: 1px solid var(--good); }
+  .verdict.bad { color: var(--bad); border: 1px solid var(--bad); }
+  .note { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); font-size: 0.95rem; cursor: pointer; }
+  .tab-btn.active { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .tab-panel[hidden] { display: none; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Multikalkulator</h1>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab-gas">Drivstoff</button>
+    <button class="tab-btn" data-tab="tab-food">Mat</button>
+  </div>
+
+  <div class="tab-panel" id="tab-gas">
+  <p class="sub">Beregner kostnad i NOK. Forbruk i liter per 100 km.</p>
+
+  <section>
+    <h2>Bil og forbruk</h2>
+    <label>Motor og forbruk
+      <select id="engine">
+        <option value="5.1">1.3 bensin (75 hk) – offisielt 5,1 l/100 km</option>
+        <option value="6.0" selected>1.3 bensin (75 hk) – virkelig ca. 6,0 l/100 km</option>
+        <option value="5.8">1.5 bensin (102 hk) – offisielt 5,8 l/100 km</option>
+        <option value="6.8">1.5 bensin (102 hk) – virkelig ca. 6,8 l/100 km</option>
+        <option value="custom">Egendefinert</option>
+      </select>
+    </label>
+    <label id="customWrap" style="display:none">Eget forbruk (l/100 km)
+      <input id="customCons" type="number" step="0.1" min="0" value="6.0">
+    </label>
+    <p class="note">Offisielle tall er fra oppgitte kilder. Virkelig forbruk er brukerrapporter og varierer med kjørestil, vær og dekk. Tallene er ikke sjekket mot Mazdas norske datablad. Velg «Egendefinert» hvis du har målt selv.</p>
+  </section>
+
+  <section>
+    <h2>Kostnad for en tur</h2>
+    <div class="row">
+      <label>Distanse (km)
+        <input id="tripKm" type="number" min="0" step="1" value="100">
+      </label>
+      <label>Bensinpris (NOK per liter)
+        <input id="tripPrice" type="number" min="0" step="0.01" value="19.99">
+      </label>
+    </div>
+    <div class="result" id="tripCost">–</div>
+    <div class="detail" id="tripLiters">–</div>
+  </section>
+
+  <section>
+    <h2>Er det verdt å kjøre til en lengre unna bensinstasjon?</h2>
+    <div class="row">
+      <label>Pris nær deg (NOK/l)
+        <input id="priceNear" type="number" min="0" step="0.01" value="19.99">
+      </label>
+      <label>Pris på fjernere stasjon (NOK/l)
+        <input id="priceFar" type="number" min="0" step="0.01" value="19.49">
+      </label>
+    </div>
+    <div class="row">
+      <label>Ekstra kjørelengde tur/retur (km)
+        <input id="extraKm" type="number" min="0" step="0.5" value="10">
+      </label>
+      <label>Liter du skal fylle (l)
+        <input id="fillLiters" type="number" min="0" step="1" value="40">
+      </label>
+    </div>
+    <div class="detail" id="compareNear">–</div>
+    <div class="detail" id="compareFar">–</div>
+    <div class="detail" id="breakEven">–</div>
+    <div class="verdict" id="verdict">–</div>
+  </section>
+  </div>
+
+  <div class="tab-panel" id="tab-food" hidden>
+  <p class="sub">Pris per kg og per måltid i NOK.</p>
+
+  <section>
+    <h2>Pris per kg og per måltid</h2>
+    <div class="row">
+      <label>Pris på pakken (NOK)
+        <input id="foodPrice" type="number" min="0" step="0.01" value="49.90">
+      </label>
+      <label>Vekt på pakken (g)
+        <input id="foodWeight" type="number" min="0" step="1" value="1000">
+      </label>
+    </div>
+    <label>Gram per måltid
+      <input id="mealGrams" type="number" min="0" step="10" value="200">
+    </label>
+    <div class="result" id="perKg">–</div>
+    <div class="detail" id="per100g">–</div>
+    <div class="result" id="perMeal">–</div>
+    <div class="detail" id="mealsPerPack">–</div>
+  </section>
+  </div>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const num = id => parseFloat($(id).value) || 0;
+  const nok = v => v.toLocaleString("no-NO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " kr";
+  const lit = v => v.toLocaleString("no-NO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " l";
+
+  function consumption() {
+    const sel = $("engine").value;
+    $("customWrap").style.display = sel === "custom" ? "block" : "none";
+    return sel === "custom" ? num("customCons") : parseFloat(sel);
+  }
+
+  function update() {
+    const cons = consumption();
+
+    // Trip cost
+    const km = num("tripKm");
+    const litersUsed = km * cons / 100;
+    $("tripLiters").textContent = `Forbruk: ${lit(litersUsed)} (${cons.toFixed(1)} l/100 km)`;
+    $("tripCost").textContent = nok(litersUsed * num("tripPrice"));
+
+    // Detour comparison
+    const pNear = num("priceNear");
+    const pFar = num("priceFar");
+    const extra = num("extraKm");
+    const fill = num("fillLiters");
+
+    // Buying at the near station: fill the tank there.
+    const costNear = fill * pNear;
+
+    // Buying at the far station: fill the tank there, plus fuel burned driving the extra distance (paid at far price).
+    const detourLiters = extra * cons / 100;
+    const costFar = (fill + detourLiters) * pFar;
+
+    const saving = costNear - costFar;
+    $("compareNear").textContent = `Nær: ${fill} l × ${pNear.toFixed(2)} kr = ${nok(costNear)}`;
+    $("compareFar").textContent = `Fjern: ${fill} l × ${pFar.toFixed(2)} kr + omkjøring ${lit(detourLiters)} = ${nok(costFar)}`;
+
+    // Break-even price drop: price difference per liter needed so the detour pays off.
+    const breakEvenDiff = fill > 0 ? (detourLiters * pFar) / fill : 0;
+    $("breakEven").textContent = `Prisforskjell for å gå i null: ${breakEvenDiff.toFixed(2)} kr/l`;
+
+    const v = $("verdict");
+    if (saving > 0.005) {
+      v.className = "verdict good";
+      v.textContent = `Verdt det: du sparer ${nok(saving)}`;
+    } else if (saving < -0.005) {
+      v.className = "verdict bad";
+      v.textContent = `Ikke verdt det: du taper ${nok(-saving)}`;
+    } else {
+      v.className = "verdict";
+      v.textContent = "Samme kostnad";
+    }
+  }
+
+  document.querySelectorAll("input, select").forEach(el => el.addEventListener("input", update));
+  $("engine").addEventListener("change", update);
+  update();
+
+  function updateFood() {
+    const price = num("foodPrice");
+    const grams = num("foodWeight");
+    const meal = num("mealGrams");
+    const kg = grams / 1000;
+    const perKg = kg > 0 ? price / kg : 0;
+    const perMeal = perKg * (meal / 1000);
+    $("perKg").textContent = `${nok(perKg)} per kg`;
+    $("per100g").textContent = `${nok(perKg / 10)} per 100 g`;
+    $("perMeal").textContent = `${nok(perMeal)} per måltid (${meal} g)`;
+    const meals = meal > 0 ? grams / meal : 0;
+    $("mealsPerPack").textContent = `Ca. ${meals.toFixed(1)} måltider per pakke`;
+  }
+
+  ["foodPrice", "foodWeight", "mealGrams"].forEach(id => $(id).addEventListener("input", updateFood));
+  updateFood();
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+      document.querySelectorAll(".tab-panel").forEach(p => p.hidden = p.id !== btn.dataset.tab);
+    });
+  });
+</script>
+</body>
+</html>
